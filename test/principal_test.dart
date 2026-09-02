@@ -13,10 +13,12 @@ void main() {
           'ext': {
             'roles': ['cis.doctor'],
             'permissions': ['cis.patient.read']
-          }
+          },
+          'picture': 'https://example.com/avatar.jpg'
         })}.signature';
     final principal = IapPrincipal.fromAccessToken(token);
     expect(principal.hasRole('cis.doctor'), isTrue);
     expect(principal.hasPermission('cis.patient.read'), isTrue);
+    expect(principal.picture, 'https://example.com/avatar.jpg');
   });
 }

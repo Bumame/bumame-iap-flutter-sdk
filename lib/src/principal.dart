@@ -8,13 +8,15 @@ class IapPrincipal {
       required this.roles,
       required this.permissions,
       this.email,
-      this.name});
+      this.name,
+      this.picture});
 
   final String subject;
   final String issuer;
   final List<String> audience;
   final String? email;
   final String? name;
+  final String? picture;
   final List<String> roles;
   final List<String> permissions;
 
@@ -49,6 +51,7 @@ class IapPrincipal {
       audience: _strings(payload['aud']),
       email: _string(payload['email']) ?? _string(ext['email']),
       name: _string(payload['name']) ?? _string(ext['name']),
+      picture: _string(payload['picture']) ?? _string(ext['picture']),
       roles: _strings(ext['roles']),
       permissions: _strings(ext['permissions']),
     );

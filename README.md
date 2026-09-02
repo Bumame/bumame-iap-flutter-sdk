@@ -9,7 +9,7 @@ dependencies:
   bumame_iap_flutter:
     git:
       url: https://github.com/Bumame/bumame-iap-flutter-sdk.git
-      ref: v0.1.0-alpha.1
+      ref: v0.1.0-alpha.2
 ```
 
 The developer and CI identity must have repository read access. Keep the repository private.
@@ -19,3 +19,8 @@ Use `IapAuthClient.createAuthorizationRequest()`, redirect the browser to the re
 `IapPermissionGate` and `IapRoleGate` control menus/buttons only. They are not security controls. Every API request must send the access token to a backend that validates it and enforces permission plus resource ownership.
 
 The default `MemoryTokenStore` deliberately avoids `localStorage`. For persistent web login, use a Next/Go BFF with secure HttpOnly cookies.
+
+Use `IapProfileMenu` in an app bar to render the provider avatar (with an
+initials fallback), display name, role label, Profile settings action, and
+Logout action. Pass the application-friendly role label because the SDK does
+not know how `cis.doctor` should be translated for each product.
