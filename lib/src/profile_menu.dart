@@ -68,118 +68,116 @@ class IapProfileMenu extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
 
-    return PopupMenuButton<IapProfileAction>(
-      tooltip: tooltip,
-      position: PopupMenuPosition.under,
-      offset: const Offset(0, 8),
-      elevation: 8,
-      color: colors.surface,
-      surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: Color(0xFFE1E7F0)),
+    return Theme(
+      // PopupMenuButton wraps a custom child in its own InkWell and ignores
+      // ButtonStyle.overlayColor. A local transparent interaction theme keeps
+      // the profile trigger visually stable on hover, focus, and click.
+      data: theme.copyWith(
+        hoverColor: Colors.transparent,
+        focusColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        splashColor: Colors.transparent,
       ),
-      menuPadding: const EdgeInsets.all(8),
-      constraints: const BoxConstraints(minWidth: 210),
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(999),
-      style: ButtonStyle(
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: PopupMenuButton<IapProfileAction>(
+        tooltip: tooltip,
+        position: PopupMenuPosition.under,
+        offset: const Offset(0, 8),
+        elevation: 8,
+        color: colors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: Color(0xFFE1E7F0)),
         ),
-        shape: const WidgetStatePropertyAll(StadiumBorder()),
-        overlayColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.hovered)) {
-            return Colors.transparent;
+        menuPadding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(minWidth: 210),
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(999),
+        onSelected: (action) {
+          switch (action) {
+            case IapProfileAction.profile:
+              unawaited(Future.sync(onProfile));
+            case IapProfileAction.logout:
+              unawaited(Future.sync(onLogout));
           }
-          if (states.contains(WidgetState.focused) ||
-              states.contains(WidgetState.pressed)) {
-            return const Color(0x142C4DA5);
-          }
-          return Colors.transparent;
-        }),
-      ),
-      onSelected: (action) {
-        switch (action) {
-          case IapProfileAction.profile:
-            unawaited(Future.sync(onProfile));
-          case IapProfileAction.logout:
-            unawaited(Future.sync(onLogout));
-        }
-      },
-      itemBuilder: (context) => const [
-        PopupMenuItem(
-          value: IapProfileAction.profile,
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.manage_accounts_outlined, size: 19),
-              SizedBox(width: 12),
-              Text('Profile settings'),
-            ],
-          ),
-        ),
-        PopupMenuDivider(height: 9),
-        PopupMenuItem(
-          value: IapProfileAction.logout,
-          height: 44,
-          child: Row(
-            children: [
-              Icon(Icons.logout_rounded, size: 19, color: Color(0xFFB63737)),
-              SizedBox(width: 12),
-              Text('Log out', style: TextStyle(color: Color(0xFFB63737))),
-            ],
-          ),
-        ),
-      ],
-      child: Semantics(
-        button: true,
-        label: tooltip,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (showIdentity) ...[
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 190),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      principal.name ?? principal.email ?? 'Bumame user',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFF17213A),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      roleLabel ??
-                          (principal.roles.isEmpty
-                              ? 'User'
-                              : principal.roles.first),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF66728D),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-            ],
-            IapAvatar(principal: principal),
-            const SizedBox(width: 4),
-            const Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 18,
-              color: Color(0xFF7B879F),
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(
+            value: IapProfileAction.profile,
+            height: 44,
+            child: Row(
+              children: [
+                Icon(Icons.manage_accounts_outlined, size: 19),
+                SizedBox(width: 12),
+                Text('Profile settings'),
+              ],
             ),
-          ],
+          ),
+          PopupMenuDivider(height: 9),
+          PopupMenuItem(
+            value: IapProfileAction.logout,
+            height: 44,
+            child: Row(
+              children: [
+                Icon(Icons.logout_rounded, size: 19, color: Color(0xFFB63737)),
+                SizedBox(width: 12),
+                Text('Log out', style: TextStyle(color: Color(0xFFB63737))),
+              ],
+            ),
+          ),
+        ],
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showIdentity) ...[
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 190),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          principal.name ?? principal.email ?? 'Bumame user',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: const Color(0xFF17213A),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          roleLabel ??
+                              (principal.roles.isEmpty
+                                  ? 'User'
+                                  : principal.roles.first),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: const Color(0xFF66728D),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                IapAvatar(principal: principal),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: Color(0xFF7B879F),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

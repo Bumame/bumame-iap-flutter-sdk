@@ -29,6 +29,18 @@ void main() {
 
     expect(find.text('Irfan Ghifari'), findsOneWidget);
     expect(find.text('Doctor'), findsOneWidget);
+    final localTheme = tester.widget<Theme>(
+      find
+          .ancestor(
+            of: find.byType(PopupMenuButton<IapProfileAction>),
+            matching: find.byType(Theme),
+          )
+          .first,
+    );
+    expect(localTheme.data.hoverColor, Colors.transparent);
+    expect(localTheme.data.focusColor, Colors.transparent);
+    expect(localTheme.data.highlightColor, Colors.transparent);
+    expect(localTheme.data.splashColor, Colors.transparent);
     await tester.tap(find.text('Irfan Ghifari'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Profile settings'));
