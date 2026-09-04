@@ -6,6 +6,7 @@ import 'auth_client.dart';
 import 'config.dart';
 import 'session.dart';
 import 'token_store.dart';
+import 'resource_context.dart';
 
 /// Browser redirect/PKCE flow. OAuth transaction state and token data are
 /// isolated in sessionStorage, never localStorage. IAP's own secure cookie is
@@ -17,10 +18,17 @@ class IapWebSignIn {
   }) {
     final store = _WebSessionTokenStore('$storagePrefix.tokens');
     final client = IapAuthClient(config, tokenStore: store);
+    final resourceKey = '$storagePrefix.resources';
+    final resourceContext = IapResourceContext(
+      initialHeaders: _readResourceHeaders(resourceKey),
+      onChanged: (headers) =>
+          html.window.sessionStorage[resourceKey] = jsonEncode(headers),
+    );
     return IapWebSignIn._(
       storagePrefix: storagePrefix,
       store: store,
       session: IapSession(client: client, tokenStore: store),
+      resourceContext: resourceContext,
     );
   }
 
@@ -28,11 +36,13 @@ class IapWebSignIn {
     required this.storagePrefix,
     required _WebSessionTokenStore store,
     required this.session,
+    required this.resourceContext,
   }) : _store = store;
 
   final String storagePrefix;
   final _WebSessionTokenStore _store;
   final IapSession session;
+  final IapResourceContext resourceContext;
 
   bool get isCallback =>
       Uri.base.queryParameters.containsKey('code') ||
@@ -85,6 +95,18 @@ class IapWebSignIn {
     html.window.sessionStorage.remove(_transactionKey);
     await _store.clear();
     await session.clear();
+    resourceContext.clear();
+  }
+}
+
+Map<String, Object?> _readResourceHeaders(String key) {
+  final raw = html.window.sessionStorage[key];
+  if (raw == null || raw.isEmpty) return const {};
+  try {
+    final value = jsonDecode(raw);
+    return value is Map<String, dynamic> ? value : const {};
+  } catch (_) {
+    return const {};
   }
 }
 

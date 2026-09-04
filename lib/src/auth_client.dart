@@ -136,6 +136,12 @@ class IapAuthClient {
       'code_verifier': request.codeVerifier,
       'client_id': config.clientId
     });
+    if (tokens.idToken != null) {
+      final claims = _decodeJwtPayload(tokens.idToken!);
+      if (claims['nonce'] != request.nonce) {
+        throw const IapException('invalid_nonce');
+      }
+    }
     await _store.write(tokens);
     return tokens;
   }
@@ -180,6 +186,18 @@ class IapAuthClient {
     }
     return TokenSet.fromJson(value);
   }
+}
+
+Map<String, dynamic> _decodeJwtPayload(String token) {
+  final parts = token.split('.');
+  if (parts.length != 3) throw const FormatException('invalid JWT');
+  final decoded = jsonDecode(
+    utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+  );
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('invalid JWT payload');
+  }
+  return decoded;
 }
 
 class IapException implements Exception {

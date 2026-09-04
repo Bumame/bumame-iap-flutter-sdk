@@ -9,6 +9,7 @@ class IapSession {
 
   final IapAuthClient client;
   final IapTokenStore tokenStore;
+  Future<String>? _refreshing;
 
   Future<TokenSet?> tokens() => tokenStore.read();
 
@@ -36,10 +37,16 @@ class IapSession {
       await clear();
       return null;
     }
-    return (await client.refresh()).accessToken;
+    return refresh();
   }
 
-  Future<String> refresh() async => (await client.refresh()).accessToken;
+  Future<String> refresh() {
+    final active = _refreshing;
+    if (active != null) return active;
+    final operation = client.refresh().then((tokens) => tokens.accessToken);
+    _refreshing = operation;
+    return operation.whenComplete(() => _refreshing = null);
+  }
 
   Future<void> save(TokenSet tokens) => tokenStore.write(tokens);
   Future<void> clear() => tokenStore.clear();

@@ -6,9 +6,8 @@ abstract interface class IapTokenStore {
   Future<void> clear();
 }
 
-/// Safe default for Flutter web: tokens disappear on refresh and are not placed
-/// in localStorage. Applications that persist tokens should use a BFF with an
-/// HttpOnly cookie instead of browser-readable storage.
+/// In-memory default. Applications that persist tokens should use the SDK web
+/// session store or, for stronger XSS isolation, a BFF with an HttpOnly cookie.
 class MemoryTokenStore implements IapTokenStore {
   TokenSet? _tokens;
 

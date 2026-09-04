@@ -12,7 +12,13 @@ void main() {
           'aud': ['urn:bumame:cis'],
           'ext': {
             'roles': ['cis.doctor'],
-            'permissions': ['cis.patient.read']
+            'permissions': ['cis.patient.read'],
+            'resource_scopes': {
+              'cis.clinics': {
+                'mode': 'selected',
+                'ids': ['7']
+              }
+            }
           },
           'picture': 'https://example.com/avatar.jpg'
         })}.signature';
@@ -20,5 +26,7 @@ void main() {
     expect(principal.hasRole('cis.doctor'), isTrue);
     expect(principal.hasPermission('cis.patient.read'), isTrue);
     expect(principal.picture, 'https://example.com/avatar.jpg');
+    expect(principal.hasResource('cis.clinics', '7'), isTrue);
+    expect(principal.hasResource('cis.clinics', '8'), isFalse);
   });
 }

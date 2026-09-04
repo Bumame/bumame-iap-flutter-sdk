@@ -9,7 +9,7 @@ dependencies:
   bumame_iap_flutter:
     git:
       url: https://github.com/Bumame/bumame-iap-flutter-sdk.git
-      ref: v0.1.0-alpha.4
+      ref: v1.0.0
 ```
 
 The package repository is public; applications should still pin a released tag.
@@ -38,6 +38,20 @@ await iap.start(); // browser redirect to Bumame IAP
 final principal = await iap.session.principal();
 final accessToken = await iap.session.accessToken();
 ```
+
+Attach the production session lifecycle to the application's Dio instance once:
+
+```dart
+dio.interceptors.add(IapDioInterceptor(
+  dio: dio,
+  session: iap.session,
+  onUnauthorized: () async => router.go('/login'),
+));
+```
+
+The application must not exchange the IAP token for an application JWT or
+implement its own refresh flow. Business context such as the selected clinic
+is sent separately (for example, `X-Clinic-ID`).
 
 The SDK keeps the OAuth transaction and token set in browser `sessionStorage`,
 not `localStorage`. A new browser session redirects through IAP again; IAP's
