@@ -24,7 +24,8 @@ class TokenSet {
       required this.expiresIn,
       this.refreshToken,
       this.idToken,
-      this.scope});
+      this.scope,
+      this.expiresAt});
   final String accessToken;
   final String tokenType;
   final int expiresIn;
@@ -32,14 +33,37 @@ class TokenSet {
   final String? idToken;
   final String? scope;
 
-  factory TokenSet.fromJson(Map<String, dynamic> json) => TokenSet(
-        accessToken: json['access_token'] as String,
-        tokenType: json['token_type'] as String,
-        expiresIn: json['expires_in'] as int,
-        refreshToken: json['refresh_token'] as String?,
-        idToken: json['id_token'] as String?,
-        scope: json['scope'] as String?,
-      );
+  /// UTC expiry calculated when the token response is received. This is kept
+  /// with the token store so an application can refresh before an API call.
+  final DateTime? expiresAt;
+
+  factory TokenSet.fromJson(Map<String, dynamic> json) {
+    final expiresIn = (json['expires_in'] as num?)?.toInt() ?? 0;
+    final rawExpiresAt = json['expires_at'];
+    final expiresAt = rawExpiresAt is String
+        ? DateTime.tryParse(rawExpiresAt)?.toUtc()
+        : DateTime.now().toUtc().add(Duration(seconds: expiresIn));
+    return TokenSet(
+      accessToken: json['access_token'] as String,
+      tokenType: json['token_type'] as String? ?? 'Bearer',
+      expiresIn: expiresIn,
+      refreshToken: json['refresh_token'] as String?,
+      idToken: json['id_token'] as String?,
+      scope: json['scope'] as String?,
+      expiresAt: expiresAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'access_token': accessToken,
+        'token_type': tokenType,
+        'expires_in': expiresIn,
+        if (refreshToken != null) 'refresh_token': refreshToken,
+        if (idToken != null) 'id_token': idToken,
+        if (scope != null) 'scope': scope,
+        if (expiresAt != null)
+          'expires_at': expiresAt!.toUtc().toIso8601String(),
+      };
 }
 
 class IapAuthClient {
@@ -112,6 +136,12 @@ class IapAuthClient {
       'code_verifier': request.codeVerifier,
       'client_id': config.clientId
     });
+    if (tokens.idToken != null) {
+      final claims = _decodeJwtPayload(tokens.idToken!);
+      if (claims['nonce'] != request.nonce) {
+        throw const IapException('invalid_nonce');
+      }
+    }
     await _store.write(tokens);
     return tokens;
   }
@@ -132,7 +162,8 @@ class IapAuthClient {
         expiresIn: updated.expiresIn,
         refreshToken: updated.refreshToken ?? current.refreshToken,
         idToken: updated.idToken ?? current.idToken,
-        scope: updated.scope);
+        scope: updated.scope,
+        expiresAt: updated.expiresAt);
     await _store.write(tokens);
     return tokens;
   }
@@ -155,6 +186,18 @@ class IapAuthClient {
     }
     return TokenSet.fromJson(value);
   }
+}
+
+Map<String, dynamic> _decodeJwtPayload(String token) {
+  final parts = token.split('.');
+  if (parts.length != 3) throw const FormatException('invalid JWT');
+  final decoded = jsonDecode(
+    utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+  );
+  if (decoded is! Map<String, dynamic>) {
+    throw const FormatException('invalid JWT payload');
+  }
+  return decoded;
 }
 
 class IapException implements Exception {
