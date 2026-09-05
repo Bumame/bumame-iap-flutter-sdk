@@ -1,6 +1,6 @@
 name: bumame_iap_flutter
 description: Bumame IAP authentication and authorization helpers for Flutter web apps.
-version: 1.0.0
+version: 1.1.0
 publish_to: none
 repository: https://github.com/Bumame/bumame-iap-flutter-sdk
 

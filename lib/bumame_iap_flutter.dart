@@ -6,6 +6,7 @@ export 'src/dio_interceptor.dart';
 export 'src/gates.dart';
 export 'src/principal.dart';
 export 'src/resource_context.dart';
+export 'src/route_guard.dart';
 export 'src/profile_menu.dart';
 export 'src/session.dart';
 export 'src/token_store.dart';
