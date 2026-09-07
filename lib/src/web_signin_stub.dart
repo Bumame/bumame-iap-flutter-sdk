@@ -32,4 +32,7 @@ class IapWebSignIn {
     await session.clear();
     resourceContext.clear();
   }
+
+  Future<void> logout() =>
+      throw UnsupportedError('IapWebSignIn is only available on Flutter web');
 }

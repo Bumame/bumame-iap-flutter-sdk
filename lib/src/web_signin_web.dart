@@ -97,6 +97,20 @@ class IapWebSignIn {
     await session.clear();
     resourceContext.clear();
   }
+
+  /// Ends both the local app session and the centralized IAP SSO session.
+  ///
+  /// Use [reset] only when restarting an app-local login transaction. User
+  /// initiated sign-out should always call this method so a subsequent login
+  /// cannot silently reuse the previous IAP session.
+  Future<void> logout() async {
+    final tokens = await session.tokens();
+    final logoutUri = await session.client.createLogoutRequest(
+      idTokenHint: tokens?.idToken,
+    );
+    await reset();
+    html.window.location.assign(logoutUri.toString());
+  }
 }
 
 Map<String, Object?> _readResourceHeaders(String key) {

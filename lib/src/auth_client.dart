@@ -120,6 +120,27 @@ class IapAuthClient {
         uri: uri, state: state, nonce: nonce, codeVerifier: verifier);
   }
 
+  /// Builds an OpenID Connect RP-initiated logout request.
+  ///
+  /// The identity provider validates [IapConfig.postLogoutRedirectUri]
+  /// against the client's registered post-logout redirect URIs. Supplying the
+  /// ID token lets the provider identify and terminate the correct SSO session.
+  Future<Uri> createLogoutRequest({String? idTokenHint}) async {
+    final discovery = await discover();
+    final endpoint = discovery['end_session_endpoint'];
+    if (endpoint is! String || endpoint.isEmpty) {
+      throw const IapException('end_session_endpoint_missing');
+    }
+
+    return Uri.parse(endpoint).replace(queryParameters: {
+      if (idTokenHint != null && idTokenHint.isNotEmpty)
+        'id_token_hint': idTokenHint,
+      if (config.postLogoutRedirectUri case final redirectUri?)
+        'post_logout_redirect_uri': redirectUri,
+      'client_id': config.clientId,
+    });
+  }
+
   Future<TokenSet> exchangeCode(
       {required Uri callbackUri, required AuthorizationRequest request}) async {
     if (callbackUri.queryParameters['state'] != request.state) {
