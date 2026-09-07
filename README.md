@@ -9,7 +9,7 @@ dependencies:
   bumame_iap_flutter:
     git:
       url: https://github.com/Bumame/bumame-iap-flutter-sdk.git
-      ref: v1.0.0
+      ref: v1.2.0
 ```
 
 The package repository is public; applications should still pin a released tag.
@@ -27,6 +27,7 @@ final iap = IapWebSignIn(
     clientId: 'cis-web',
     audience: 'urn:bumame:cis',
     redirectUri: 'https://cis.bumame.com/login',
+    postLogoutRedirectUri: 'https://cis.bumame.com/login',
   ),
 );
 
@@ -37,6 +38,8 @@ if (iap.isCallback) {
 await iap.start(); // browser redirect to Bumame IAP
 final principal = await iap.session.principal();
 final accessToken = await iap.session.accessToken();
+
+await iap.logout(); // clears app state and terminates the centralized IAP session
 ```
 
 Attach the production session lifecycle to the application's Dio instance once:
@@ -57,6 +60,10 @@ The SDK keeps the OAuth transaction and token set in browser `sessionStorage`,
 not `localStorage`. A new browser session redirects through IAP again; IAP's
 secure SSO cookie completes that redirect without prompting for credentials
 while the IAP session remains valid.
+
+Use `iap.logout()` for a user-initiated logout. `iap.reset()` only clears the
+application's local OAuth state and is intended for restarting a login flow;
+it does not terminate the centralized IAP browser session.
 
 `IapPermissionGate` and `IapRoleGate` control menus/buttons only. They are not
 security controls. Every API request must send the access token to a backend
