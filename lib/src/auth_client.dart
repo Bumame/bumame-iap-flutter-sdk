@@ -132,11 +132,15 @@ class IapAuthClient {
       throw const IapException('end_session_endpoint_missing');
     }
 
+    final hasIdTokenHint = idTokenHint != null && idTokenHint.isNotEmpty;
+    final postLogoutRedirectUri = config.postLogoutRedirectUri;
     return Uri.parse(endpoint).replace(queryParameters: {
-      if (idTokenHint != null && idTokenHint.isNotEmpty)
-        'id_token_hint': idTokenHint,
-      if (config.postLogoutRedirectUri case final redirectUri?)
-        'post_logout_redirect_uri': redirectUri,
+      if (hasIdTokenHint) 'id_token_hint': idTokenHint,
+      // Hydra rejects post_logout_redirect_uri without id_token_hint. When an
+      // application session has already expired, use the provider's safe
+      // fallback page instead of constructing a malformed logout request.
+      if (hasIdTokenHint && postLogoutRedirectUri != null)
+        'post_logout_redirect_uri': postLogoutRedirectUri,
       'client_id': config.clientId,
     });
   }
