@@ -1,3 +1,4 @@
+import 'dart:async';
 // ignore: deprecated_member_use, avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:convert';
@@ -58,7 +59,7 @@ class IapWebSignIn {
       'nonce': request.nonce,
       'code_verifier': request.codeVerifier,
     });
-    html.window.location.assign(request.uri.toString());
+    await _navigateAway(request.uri);
   }
 
   Future<TokenSet> complete() async {
@@ -109,7 +110,15 @@ class IapWebSignIn {
       idTokenHint: tokens?.idToken,
     );
     await reset();
-    html.window.location.assign(logoutUri.toString());
+    await _navigateAway(logoutUri);
+  }
+
+  /// Browser navigation is the terminal result of login/logout. Keeping this
+  /// future pending prevents callers from changing their auth state and
+  /// starting a second redirect before the browser has left the page.
+  Future<void> _navigateAway(Uri uri) {
+    html.window.location.assign(uri.toString());
+    return Completer<void>().future;
   }
 }
 
