@@ -73,4 +73,26 @@ void main() {
     expect(find.text('app-and-data'), findsNothing);
     expect(find.text('VPN Access'), findsNothing);
   });
+
+  testWidgets('formats an explicit namespaced role for people', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            actions: [
+              IapProfileMenu(
+                principal: principal,
+                roleLabel: 'cis.ops-admin',
+                onProfile: () {},
+                onLogout: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Ops Admin'), findsOneWidget);
+    expect(find.text('cis.ops-admin'), findsNothing);
+  });
 }

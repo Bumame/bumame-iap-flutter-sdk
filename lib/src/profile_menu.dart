@@ -199,7 +199,7 @@ String _profileRoleLabel(
 }) {
   final explicitLabel = roleLabel?.trim();
   if (explicitLabel != null && explicitLabel.isNotEmpty) {
-    return explicitLabel;
+    return _friendlyRoleLabel(explicitLabel);
   }
 
   final normalizedKey = applicationKey?.trim().toLowerCase();
@@ -216,7 +216,10 @@ String _profileRoleLabel(
   selectedRole ??= roles.isEmpty ? null : roles.first;
   if (selectedRole == null || selectedRole.trim().isEmpty) return 'User';
 
-  final value = selectedRole.trim();
+  return _friendlyRoleLabel(selectedRole.trim());
+}
+
+String _friendlyRoleLabel(String value) {
   final separator = value.indexOf('.');
   final roleName = separator >= 0 ? value.substring(separator + 1) : value;
   return roleName
@@ -233,15 +236,15 @@ class _Initials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Text(
-      _initials(name),
-      style: TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.w700,
-        letterSpacing: .2,
-      ),
-    ),
-  );
+        child: Text(
+          _initials(name),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            letterSpacing: .2,
+          ),
+        ),
+      );
 }
 
 String _initials(String value) {
