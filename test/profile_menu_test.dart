@@ -7,25 +7,29 @@ void main() {
     subject: 'user-1',
     issuer: 'https://auth.bumame.com',
     audience: ['urn:bumame:cis'],
-    roles: ['cis.doctor'],
+    roles: ['app-and-data', 'vpn.access', 'cis.doctor'],
     permissions: [],
     name: 'Irfan Ghifari',
   );
 
   testWidgets('shows identity and invokes profile action', (tester) async {
     var profileOpened = false;
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(actions: [
-          IapProfileMenu(
-            principal: principal,
-            roleLabel: 'Doctor',
-            onProfile: () => profileOpened = true,
-            onLogout: () {},
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            actions: [
+              IapProfileMenu(
+                principal: principal,
+                applicationKey: 'cis',
+                onProfile: () => profileOpened = true,
+                onLogout: () {},
+              ),
+            ],
           ),
-        ]),
+        ),
       ),
-    ));
+    );
 
     expect(find.text('Irfan Ghifari'), findsOneWidget);
     expect(find.text('Doctor'), findsOneWidget);
@@ -45,5 +49,28 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Profile settings'));
     expect(profileOpened, isTrue);
+  });
+
+  testWidgets('shows the role owned by the active application', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(
+            actions: [
+              IapProfileMenu(
+                principal: principal,
+                applicationKey: 'cis',
+                onProfile: () {},
+                onLogout: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Doctor'), findsOneWidget);
+    expect(find.text('app-and-data'), findsNothing);
+    expect(find.text('VPN Access'), findsNothing);
   });
 }

@@ -35,9 +35,8 @@ class IapAvatar extends StatelessWidget {
                 width: radius * 2,
                 height: radius * 2,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _Initials(
-                  name: principal.name ?? principal.email ?? '?',
-                ),
+                errorBuilder: (_, __, ___) =>
+                    _Initials(name: principal.name ?? principal.email ?? '?'),
               )
             : _Initials(name: principal.name ?? principal.email ?? '?'),
       ),
@@ -52,6 +51,7 @@ class IapProfileMenu extends StatelessWidget {
     required this.onProfile,
     required this.onLogout,
     this.roleLabel,
+    this.applicationKey,
     this.showIdentity = true,
     this.tooltip = 'Account menu',
   });
@@ -60,6 +60,13 @@ class IapProfileMenu extends StatelessWidget {
   final FutureOr<void> Function() onProfile;
   final FutureOr<void> Function() onLogout;
   final String? roleLabel;
+
+  /// Selects the first namespaced role owned by the current application.
+  ///
+  /// For example, `applicationKey: 'cis'` displays `cis.doctor` as `Doctor`
+  /// even when the principal also contains infrastructure roles such as
+  /// `vpn.access`.
+  final String? applicationKey;
   final bool showIdentity;
   final String tooltip;
 
@@ -152,10 +159,11 @@ class IapProfileMenu extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          roleLabel ??
-                              (principal.roles.isEmpty
-                                  ? 'User'
-                                  : principal.roles.first),
+                          _profileRoleLabel(
+                            principal.roles,
+                            roleLabel: roleLabel,
+                            applicationKey: applicationKey,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(
@@ -184,6 +192,40 @@ class IapProfileMenu extends StatelessWidget {
   }
 }
 
+String _profileRoleLabel(
+  List<String> roles, {
+  String? roleLabel,
+  String? applicationKey,
+}) {
+  final explicitLabel = roleLabel?.trim();
+  if (explicitLabel != null && explicitLabel.isNotEmpty) {
+    return explicitLabel;
+  }
+
+  final normalizedKey = applicationKey?.trim().toLowerCase();
+  String? selectedRole;
+  if (normalizedKey != null && normalizedKey.isNotEmpty) {
+    final prefix = '$normalizedKey.';
+    for (final role in roles) {
+      if (role.trim().toLowerCase().startsWith(prefix)) {
+        selectedRole = role;
+        break;
+      }
+    }
+  }
+  selectedRole ??= roles.isEmpty ? null : roles.first;
+  if (selectedRole == null || selectedRole.trim().isEmpty) return 'User';
+
+  final value = selectedRole.trim();
+  final separator = value.indexOf('.');
+  final roleName = separator >= 0 ? value.substring(separator + 1) : value;
+  return roleName
+      .split(RegExp(r'[-_\s]+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+      .join(' ');
+}
+
 class _Initials extends StatelessWidget {
   const _Initials({required this.name});
 
@@ -191,15 +233,15 @@ class _Initials extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: Text(
-          _initials(name),
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            letterSpacing: .2,
-          ),
-        ),
-      );
+    child: Text(
+      _initials(name),
+      style: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.w700,
+        letterSpacing: .2,
+      ),
+    ),
+  );
 }
 
 String _initials(String value) {
