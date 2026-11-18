@@ -173,22 +173,24 @@ class IapAuthClient {
 
   Future<TokenSet> refresh() async {
     final current = await _store.read();
-    if (current?.refreshToken == null) {
+    final refreshToken = current?.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) {
       throw const IapException('missing_refresh_token');
     }
     final updated = await _tokenRequest({
       'grant_type': 'refresh_token',
-      'refresh_token': current!.refreshToken!,
-      'client_id': config.clientId
+      'refresh_token': refreshToken,
+      'client_id': config.clientId,
     });
     final tokens = TokenSet(
-        accessToken: updated.accessToken,
-        tokenType: updated.tokenType,
-        expiresIn: updated.expiresIn,
-        refreshToken: updated.refreshToken ?? current.refreshToken,
-        idToken: updated.idToken ?? current.idToken,
-        scope: updated.scope,
-        expiresAt: updated.expiresAt);
+      accessToken: updated.accessToken,
+      tokenType: updated.tokenType,
+      expiresIn: updated.expiresIn,
+      refreshToken: updated.refreshToken ?? refreshToken,
+      idToken: updated.idToken ?? current?.idToken,
+      scope: updated.scope,
+      expiresAt: updated.expiresAt,
+    );
     await _store.write(tokens);
     return tokens;
   }
@@ -197,12 +199,30 @@ class IapAuthClient {
   Future<void> clearLocalSession() => _store.clear();
 
   Future<TokenSet> _tokenRequest(Map<String, String> body) async {
-    final discovery = await discover();
-    final response = await _http.post(
-        Uri.parse(discovery['token_endpoint'] as String),
-        headers: {'content-type': 'application/x-www-form-urlencoded'},
-        body: body);
+    final isRefresh = body['grant_type'] == 'refresh_token';
+    const refreshTimeout = Duration(seconds: 30);
+    final discovery =
+        await (isRefresh ? discover().timeout(refreshTimeout) : discover());
+    final request = _http.post(
+      Uri.parse(discovery['token_endpoint'] as String),
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+      body: body,
+    );
+    final response =
+        await (isRefresh ? request.timeout(refreshTimeout) : request);
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (isRefresh && response.statusCode == 400) {
+        Object? errorBody;
+        try {
+          errorBody = jsonDecode(response.body);
+        } on FormatException {
+          // A proxy or non-OAuth error is not proof of session expiry.
+        }
+        if (errorBody is Map<String, dynamic> &&
+            errorBody['error'] == 'invalid_grant') {
+          throw const IapException('invalid_grant', 400);
+        }
+      }
       throw IapException('token_exchange_failed', response.statusCode);
     }
     final value = jsonDecode(response.body);
@@ -229,6 +249,10 @@ class IapException implements Exception {
   const IapException(this.code, [this.statusCode]);
   final String code;
   final int? statusCode;
+
+  bool get isRefreshRejected =>
+      code == 'missing_refresh_token' || code == 'invalid_grant';
+
   @override
   String toString() => statusCode == null ? code : '$code ($statusCode)';
 }

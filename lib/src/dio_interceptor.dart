@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'auth_client.dart';
 import 'session.dart';
 
 typedef IapUnauthorizedCallback = Future<void> Function();
@@ -14,12 +15,14 @@ class IapDioInterceptor extends QueuedInterceptor {
     required this.session,
     this.onUnauthorized,
     this.requestHeaders,
+    this.invalidateOnlyOnRejectedRefresh = false,
   });
 
   final Dio dio;
   final IapSession session;
   final IapUnauthorizedCallback? onUnauthorized;
   final IapRequestHeaders? requestHeaders;
+  final bool invalidateOnlyOnRejectedRefresh;
 
   @override
   Future<void> onRequest(
@@ -32,11 +35,17 @@ class IapDioInterceptor extends QueuedInterceptor {
     }
     try {
       final token = await session.accessToken();
+      if (token == null && invalidateOnlyOnRejectedRefresh) {
+        throw const IapException('missing_refresh_token');
+      }
       if (token != null) options.headers['Authorization'] = 'Bearer $token';
       final contextual = requestHeaders?.call();
       if (contextual != null) options.headers.addAll(contextual);
       handler.next(options);
     } catch (error, stackTrace) {
+      if (invalidateOnlyOnRejectedRefresh) {
+        await _handleRejectedRefresh(error);
+      }
       handler.reject(
         DioException(
           requestOptions: options,
@@ -54,6 +63,13 @@ class IapDioInterceptor extends QueuedInterceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final request = err.requestOptions;
+    if (invalidateOnlyOnRejectedRefresh) {
+      if (err.response?.statusCode != 401 ||
+          request.extra['iapAuth'] == false) {
+        return handler.next(err);
+      }
+      return _retryAfterRefresh(err, handler);
+    }
     if (err.response?.statusCode != 401 ||
         request.extra['iapAuth'] == false ||
         request.extra['iapRetried'] == true) {
@@ -73,6 +89,52 @@ class IapDioInterceptor extends QueuedInterceptor {
     } catch (_) {
       await _invalidate();
       handler.next(err);
+    }
+  }
+
+  Future<void> _retryAfterRefresh(
+    DioException error,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final request = error.requestOptions;
+    String token;
+    try {
+      final current = await session.tokens();
+      if (current == null) return handler.next(error);
+      token =
+          request.headers['Authorization'] == 'Bearer ${current.accessToken}'
+              ? await session.refresh()
+              : (await session.accessToken()) ??
+                  (throw const IapException('missing_refresh_token'));
+    } catch (cause, stackTrace) {
+      await _handleRejectedRefresh(cause);
+      return handler.next(
+        DioException(
+          requestOptions: request,
+          error: cause,
+          stackTrace: stackTrace,
+          message: 'IAP session refresh failed',
+        ),
+      );
+    }
+
+    // Do not re-enter this queued error interceptor if the retry fails.
+    final retryClient = dio.clone()..interceptors.remove(this);
+    try {
+      final response = await retryClient.fetch<dynamic>(
+        request.copyWith(
+          headers: {...request.headers, 'Authorization': 'Bearer $token'},
+        ),
+      );
+      handler.resolve(response);
+    } on DioException catch (retryError) {
+      handler.next(retryError);
+    }
+  }
+
+  Future<void> _handleRejectedRefresh(Object error) async {
+    if (error is IapException && error.isRefreshRejected) {
+      await _invalidate();
     }
   }
 
